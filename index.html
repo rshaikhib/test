@@ -23,19 +23,27 @@
 
 			function initOnReady() {
 				var widget = window.tvWidget = new TradingView.widget({
-					// debug: true, // uncomment this line to see Library errors and warnings in the console
+					debug: true, // uncomment this line to see Library errors and warnings in the console
 					fullscreen: true,
 					symbol: 'AAPL',
-					interval: '1D',
+					interval: '1W',
+					time_frame: '7d',
 					container: "tv_chart_container",
-
+					debug: false,
+					autosize: false,
+					study_count_limit: 8,
 					//	BEWARE: no trailing slash is expected in feed URL
 					datafeed: new Datafeeds.UDFCompatibleDatafeed("https://demo-feed-data.tradingview.com"),
 					library_path: "charting_library/",
 					locale: getParameterByName('lang') || "en",
 
-					disabled_features: ["use_localstorage_for_settings"],
-					enabled_features: ["study_templates"],
+					disabled_features: ["use_localstorage_for_settings", 'header_symbol_search', 'header_saveload', 'go_to_date', 'adaptive_logo', 'mouse_wheel_scale',
+                        'symbol_search_hot_key', 'show_interval_dialog_on_key_press', 'header_screenshot',
+                        'header_compare', 'header_undo_redo',
+                        'pane_context_menu', 'support_multicharts', 'header_layouttoggle', 'buy_sell_buttons',
+                        'order_panel', 'mouse_wheel_scroll', 'widget_logo', 'trading_account_manager',
+                        'show_object_tree'],
+					enabled_features: ["study_templates", "seconds_resolution"],
 					charts_storage_url: 'https://saveload.tradingview.com',
 					charts_storage_api_version: "1.1",
 					client_id: 'tradingview.com',

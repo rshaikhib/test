@@ -1,1 +1,782 @@
-!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports):"function"==typeof define&&define.amd?define(["exports"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).Datafeeds={})}(this,function(e){"use strict";var r=function(e,t){return(r=Object.setPrototypeOf||{__proto__:[]}instanceof Array&&function(e,t){e.__proto__=t}||function(e,t){for(var r in t)Object.prototype.hasOwnProperty.call(t,r)&&(e[r]=t[r])})(e,t)};function n(e){return void 0===e?"":"string"==typeof e?e:e.message}var i=(t.prototype.getBars=function(e,t,r){var s=this,o={symbol:e.ticker||"",resolution:t,from:r.from,to:r.to};return void 0!==r.countBack&&(o.countback=r.countBack),void 0!==e.currency_code&&(o.currencyCode=e.currency_code),new Promise(function(a,u){s._requester.sendRequest(s._datafeedUrl,"history",o).then(function(e){if("ok"===e.s||"no_data"===e.s){var t=[],r={noData:!1};if("no_data"===e.s)r.noData=!0,r.nextTime=e.nextTime;else for(var s=void 0!==e.v,o=void 0!==e.o,n=0;n<e.t.length;++n){var i={time:1e3*e.t[n],close:parseFloat(e.c[n]),open:parseFloat(e.c[n]),high:parseFloat(e.c[n]),low:parseFloat(e.c[n])};o&&(i.open=parseFloat(e.o[n]),i.high=parseFloat(e.h[n]),i.low=parseFloat(e.l[n])),s&&(i.volume=parseFloat(e.v[n])),t.push(i)}a({bars:t,meta:r})}else u(e.errmsg)}).catch(function(e){e=n(e);console.warn("HistoryProvider: getBars() failed, error="+e),u(e)})})},t);function t(e,t){this._datafeedUrl=e,this._requester=t}var a=(s.prototype.subscribeBars=function(e,t,r,s){this._subscribers.hasOwnProperty(s)||(this._subscribers[s]={lastBarTime:null,listener:r,resolution:t,symbolInfo:e},e.name)},s.prototype.unsubscribeBars=function(e){delete this._subscribers[e]},s.prototype._updateData=function(){var t=this;if(!(0<this._requestsPending)){this._requestsPending=0;var e,r,s=this;for(e in this._subscribers)r=e,s._requestsPending+=1,s._updateDataForSubscriber(r).then(function(){--t._requestsPending,t._requestsPending}).catch(function(e){--t._requestsPending,n(e),t._requestsPending})}},s.prototype._updateDataForSubscriber=function(t){var r=this,e=this._subscribers[t],s=parseInt((Date.now()/1e3).toString()),o=s-function(e,t){var r=0;r="D"===e||"1D"===e?t:"M"===e||"1M"===e?31*t:"W"===e||"1W"===e?7*t:t*parseInt(e)/1440;return 24*r*60*60}(e.resolution,10);return this._historyProvider.getBars(e.symbolInfo,e.resolution,{from:o,to:s,countBack:2,firstDataRequest:!1}).then(function(e){r._onSubscriberDataReceived(t,e)})},s.prototype._onSubscriberDataReceived=function(e,t){if(this._subscribers.hasOwnProperty(e)){var r=t.bars;if(0!==r.length){t=r[r.length-1],e=this._subscribers[e];if(!(null!==e.lastBarTime&&t.time<e.lastBarTime)){if(null!==e.lastBarTime&&t.time>e.lastBarTime){if(r.length<2)throw new Error("Not enough bars in history for proper pulse update. Need at least 2.");r=r[r.length-2];e.listener(r)}e.lastBarTime=t.time,e.listener(t)}}}},s);function s(e,t){this._subscribers={},this._requestsPending=0,this._historyProvider=e,setInterval(this._updateData.bind(this),t)}var u=(o.prototype.subscribeQuotes=function(e,t,r,s){this._subscribers[s]={symbols:e,fastSymbols:t,listener:r}},o.prototype.unsubscribeQuotes=function(e){delete this._subscribers[e]},o.prototype._updateQuotes=function(e){var s=this;if(!(0<this._requestsPending)){var t,o=this;for(t in this._subscribers)!function(t){o._requestsPending++;var r=o._subscribers[t];o._quotesProvider.getQuotes(1===e?r.fastSymbols:r.symbols).then(function(e){s._requestsPending--,s._subscribers.hasOwnProperty(t)&&(r.listener(e),s._requestsPending)}).catch(function(e){s._requestsPending--,n(e),s._requestsPending})}(t)}},o);function o(e){this._subscribers={},this._requestsPending=0,this._quotesProvider=e,setInterval(this._updateQuotes.bind(this,1),1e4),setInterval(this._updateQuotes.bind(this,0),6e4)}function p(e,t,r,s){t=e[t];return!Array.isArray(t)||s&&!Array.isArray(t[0])?t:t[r]}function f(e,t){return e+(void 0!==t?"_%|#|%_"+t:"")}var c=(h.prototype.resolveSymbol=function(t,r){var s=this;return this._readyPromise.then(function(){var e=s._symbolsInfo[f(t,r)];return void 0===e?Promise.reject("invalid symbol"):Promise.resolve(e)})},h.prototype.searchSymbols=function(n,i,a,u){var c=this;return this._readyPromise.then(function(){var s=[],o=0===n.length;n=n.toUpperCase();for(var e=0,t=c._symbolsList;e<t.length;e++)!function(e){var t=c._symbolsInfo[e];if(void 0===t)return;if(0<a.length&&t.type!==a)return;if(i&&0<i.length&&t.exchange!==i)return;var r=t.name.toUpperCase().indexOf(n),e=t.description.toUpperCase().indexOf(n);(o||0<=r||0<=e)&&(s.some(function(e){return e.symbolInfo===t})||s.push({symbolInfo:t,weight:0<=r?r:8e3+e}))}(t[e]);var r=s.sort(function(e,t){return e.weight-t.weight}).slice(0,u).map(function(e){e=e.symbolInfo;return{symbol:e.name,full_name:e.full_name,description:e.description,exchange:e.exchange,params:[],type:e.type,ticker:e.name}});return Promise.resolve(r)})},h.prototype._init=function(){for(var e=this,t=[],r={},s=0,o=this._exchangesList;s<o.length;s++){var n=o[s];r[n]||(r[n]=!0,t.push(this._requestExchangeData(n)))}return Promise.all(t).then(function(){e._symbolsList.sort()})},h.prototype._requestExchangeData=function(s){var o=this;return new Promise(function(t,r){o._requester.sendRequest(o._datafeedUrl,"symbol_info",{group:s}).then(function(e){try{o._onExchangeDataReceived(s,e)}catch(e){return void r(e)}t()}).catch(function(e){n(e),t()})})},h.prototype._onExchangeDataReceived=function(t,r){var s=0;try{for(var e=r.symbol.length,o=void 0!==r.ticker;s<e;++s){var n=r.symbol[s],i=p(r,"exchange-listed",s),a=p(r,"exchange-traded",s),u=a+":"+n,c=p(r,"currency-code",s),h=o?p(r,"ticker",s):n,l={ticker:h,name:n,base_name:[i+":"+n],full_name:u,listed_exchange:i,exchange:a,currency_code:c,original_currency_code:p(r,"original-currency-code",s),description:p(r,"description",s),has_intraday:_(p(r,"has-intraday",s),!1),has_no_volume:_(p(r,"has-no-volume",s),!1),minmov:p(r,"minmovement",s)||p(r,"minmov",s)||0,minmove2:p(r,"minmove2",s)||p(r,"minmov2",s),fractional:p(r,"fractional",s),pricescale:p(r,"pricescale",s),type:p(r,"type",s),session:p(r,"session-regular",s),timezone:p(r,"timezone",s),supported_resolutions:_(p(r,"supported-resolutions",s,!0),this._datafeedSupportedResolutions),has_daily:_(p(r,"has-daily",s),!0),intraday_multipliers:_(p(r,"intraday-multipliers",s,!0),["1","5","15","30","60"]),has_weekly_and_monthly:p(r,"has-weekly-and-monthly",s),has_empty_bars:p(r,"has-empty-bars",s),volume_precision:_(p(r,"volume-precision",s),0),format:"price"};this._symbolsInfo[h]=l,this._symbolsInfo[n]=l,this._symbolsInfo[u]=l,void 0!==c&&(this._symbolsInfo[f(h,c)]=l,this._symbolsInfo[f(n,c)]=l,this._symbolsInfo[f(u,c)]=l),this._symbolsList.push(n)}}catch(e){throw new Error("SymbolsStorage: API error when processing exchange "+t+" symbol #"+s+" ("+r.symbol[s]+"): "+e.message)}},h);function h(e,t,r){this._exchangesList=["NYSE","FOREX","AMEX"],this._symbolsInfo={},this._symbolsList=[],this._datafeedUrl=e,this._datafeedSupportedResolutions=t,this._requester=r,this._readyPromise=this._init(),this._readyPromise.catch(function(e){console.error("SymbolsStorage: Cannot init, error="+e.toString())})}function _(e,t){return void 0!==e?e:t}function l(e,t,r){t=e[t];return Array.isArray(t)?t[r]:t}var d=(m.prototype.onReady=function(e){var t=this;this._configurationReadyPromise.then(function(){e(t._configuration)})},m.prototype.getQuotes=function(e,t,r){this._quotesProvider.getQuotes(e).then(t).catch(r)},m.prototype.subscribeQuotes=function(e,t,r,s){this._quotesPulseProvider.subscribeQuotes(e,t,r,s)},m.prototype.unsubscribeQuotes=function(e){this._quotesPulseProvider.unsubscribeQuotes(e)},m.prototype.getMarks=function(e,t,r,s,o){this._configuration.supports_marks&&(o={symbol:e.ticker||"",from:t,to:r,resolution:o},this._send("marks",o).then(function(e){if(!Array.isArray(e)){for(var t=[],r=0;r<e.id.length;++r)t.push({id:l(e,"id",r),time:l(e,"time",r),color:l(e,"color",r),text:l(e,"text",r),label:l(e,"label",r),labelFontColor:l(e,"labelFontColor",r),minSize:l(e,"minSize",r)});e=t}s(e)}).catch(function(e){n(e),s([])}))},m.prototype.getTimescaleMarks=function(e,t,r,s,o){this._configuration.supports_timescale_marks&&(o={symbol:e.ticker||"",from:t,to:r,resolution:o},this._send("timescale_marks",o).then(function(e){if(!Array.isArray(e)){for(var t=[],r=0;r<e.id.length;++r)t.push({id:l(e,"id",r),time:l(e,"time",r),color:l(e,"color",r),label:l(e,"label",r),tooltip:l(e,"tooltip",r)});e=t}s(e)}).catch(function(e){n(e),s([])}))},m.prototype.getServerTime=function(t){this._configuration.supports_time&&this._send("time").then(function(e){e=parseInt(e);isNaN(e)||t(e)}).catch(function(e){n(e)})},m.prototype.searchSymbols=function(e,t,r,s){if(this._configuration.supports_search){var o={limit:30,query:e.toUpperCase(),type:r,exchange:t};this._send("search",o).then(function(e){return void 0!==e.s?(e.errmsg,void s([])):void s(e)}).catch(function(e){n(e),s([])})}else{if(null===this._symbolsStorage)throw new Error("UdfCompatibleDatafeed: inconsistent configuration (symbols storage)");this._symbolsStorage.searchSymbols(e,t,r,30).then(s).catch(s.bind(null,[]))}},m.prototype.resolveSymbol=function(e,t,r,s){s=s&&s.currencyCode;function o(e){t(e)}if(this._configuration.supports_group_request){if(null===this._symbolsStorage)throw new Error("UdfCompatibleDatafeed: inconsistent configuration (symbols storage)");this._symbolsStorage.resolveSymbol(e,s).then(o).catch(r)}else{e={symbol:e};void 0!==s&&(e.currencyCode=s),this._send("symbols",e).then(function(e){void 0!==e.s?r("unknown_symbol"):o(e)}).catch(function(e){n(e),r("unknown_symbol")})}},m.prototype.getBars=function(e,t,r,s,o){this._historyProvider.getBars(e,t,r).then(function(e){s(e.bars,e.meta)}).catch(o)},m.prototype.subscribeBars=function(e,t,r,s,o){this._dataPulseProvider.subscribeBars(e,t,r,s)},m.prototype.unsubscribeBars=function(e){this._dataPulseProvider.unsubscribeBars(e)},m.prototype._requestConfiguration=function(){return this._send("config").catch(function(e){return n(e),null})},m.prototype._send=function(e,t){return this._requester.sendRequest(this._datafeedURL,e,t)},m.prototype._setupWithConfiguration=function(e){if(void 0===(this._configuration=e).exchanges&&(e.exchanges=[]),!e.supports_search&&!e.supports_group_request)throw new Error("Unsupported datafeed configuration. Must either support search, or support group request");!e.supports_group_request&&e.supports_search||(this._symbolsStorage=new c(this._datafeedURL,e.supported_resolutions||[],this._requester)),JSON.stringify(e)},m);function m(e,t,r,s){var o=this;void 0===s&&(s=1e4),this._configuration=y(),this._symbolsStorage=null,this._datafeedURL=e,this._requester=r,this._historyProvider=new i(e,this._requester),this._quotesProvider=t,this._dataPulseProvider=new a(this._historyProvider,s),this._quotesPulseProvider=new u(this._quotesProvider),this._configurationReadyPromise=this._requestConfiguration().then(function(e){null===e&&(e=y()),o._setupWithConfiguration(e)})}function y(){return{supports_search:!1,supports_group_request:!0,supported_resolutions:["1","5","15","30","60","1D","1W","1M"],supports_marks:!1,supports_timescale_marks:!1}}var b=(g.prototype.getQuotes=function(e){var s=this;return new Promise(function(t,r){s._requester.sendRequest(s._datafeedUrl,"quotes",{symbols:e}).then(function(e){"ok"===e.s?t(e.d):r(e.errmsg)}).catch(function(e){e=n(e);r("network error: "+e)})})},g);function g(e,t){this._datafeedUrl=e,this._requester=t}var v=(P.prototype.sendRequest=function(e,t,r){void 0!==r&&(0!==(s=Object.keys(r)).length&&(t+="?"),t+=s.map(function(e){return encodeURIComponent(e)+"="+encodeURIComponent(r[e].toString())}).join("&"));var s={credentials:"same-origin"};return void 0!==this._headers&&(s.headers=this._headers),fetch(e+"/"+t,s).then(function(e){return e.text()}).then(function(e){return JSON.parse(e)})},P);function P(e){e&&(this._headers=e)}var q,w,S,k=(r(w=I,S=q=d),w.prototype=null===S?Object.create(S):(x.prototype=S.prototype,new x),I);function x(){this.constructor=w}function I(e,t){void 0===t&&(t=1e4);var r=new v,s=new b(e,r);return q.call(this,e,s,r,t)||this}e.UDFCompatibleDatafeed=k,Object.defineProperty(e,"__esModule",{value:!0})});
+(function (global, factory) {
+    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+    typeof define === 'function' && define.amd ? define(['exports'], factory) :
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.Datafeeds = {}));
+}(this, (function (exports) { 'use strict';
+
+    /*! *****************************************************************************
+    Copyright (c) Microsoft Corporation.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+    ***************************************************************************** */
+    /* global Reflect, Promise */
+
+    var extendStatics = function(d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) { if (Object.prototype.hasOwnProperty.call(b, p)) { d[p] = b[p]; } } };
+        return extendStatics(d, b);
+    };
+
+    function __extends(d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    }
+
+    /**
+     * If you want to enable logs from datafeed set it to `true`
+     */
+    function logMessage(message) {
+        console.log(message);
+    }
+    function getErrorMessage(error) {
+        if (error === undefined) {
+            return '';
+        }
+        else if (typeof error === 'string') {
+            return error;
+        }
+        return error.message;
+    }
+
+    var HistoryProvider = /** @class */ (function () {
+        function HistoryProvider(datafeedUrl, requester) {
+            this._datafeedUrl = datafeedUrl;
+            this._requester = requester;
+        }
+        HistoryProvider.prototype.getBars = function (symbolInfo, resolution, periodParams) {
+            var _this = this;
+            const LATEST = 1522108800;
+            const ONE_YEAR = 60 * 60 * 24 * 365;
+            var requestParams = {
+                symbol: symbolInfo.ticker || '',
+                resolution: resolution,
+                from: LATEST - ONE_YEAR,
+                to: LATEST,
+            };
+            console.log('calling getBars', periodParams, requestParams);
+
+            if (periodParams.countBack !== undefined) {
+                // requestParams.countback = periodParams.countBack;
+            }
+            if (symbolInfo.currency_code !== undefined) {
+                requestParams.currencyCode = symbolInfo.currency_code;
+            }
+            return new Promise(function (resolve, reject) {
+                _this._requester.sendRequest(_this._datafeedUrl, 'history', requestParams)
+                    .then(function (response) {
+                    if (response.s !== 'ok' && response.s !== 'no_data') {
+                        reject(response.errmsg);
+                        return;
+                    }
+                    var bars = [];
+                    var meta = {
+                        noData: false,
+                    };
+                    if (response.s === 'no_data') {
+                        meta.noData = true;
+                        meta.nextTime = response.nextTime;
+                    }
+                    else {
+                        var volumePresent = response.v !== undefined;
+                        var ohlPresent = response.o !== undefined;
+                        for (var i = 0; i < response.t.length; ++i) {
+                            var barValue = {
+                                time: response.t[i] * 1000,
+                                close: parseFloat(response.c[i]),
+                                open: parseFloat(response.c[i]),
+                                high: parseFloat(response.c[i]),
+                                low: parseFloat(response.c[i]),
+                            };
+                            if (ohlPresent) {
+                                barValue.open = parseFloat(response.o[i]);
+                                barValue.high = parseFloat(response.h[i]);
+                                barValue.low = parseFloat(response.l[i]);
+                            }
+                            if (volumePresent) {
+                                barValue.volume = parseFloat(response.v[i]);
+                            }
+                            bars.push(barValue);
+                        }
+                    }
+                    resolve({
+                        bars: bars,
+                        meta: meta,
+                    });
+                })
+                    .catch(function (reason) {
+                    var reasonString = getErrorMessage(reason);
+                    // tslint:disable-next-line:no-console
+                    console.warn("HistoryProvider: getBars() failed, error=" + reasonString);
+                    reject(reasonString);
+                });
+            });
+        };
+        return HistoryProvider;
+    }());
+
+    var DataPulseProvider = /** @class */ (function () {
+        function DataPulseProvider(historyProvider, updateFrequency) {
+            this._subscribers = {};
+            this._requestsPending = 0;
+            this._historyProvider = historyProvider;
+            setInterval(this._updateData.bind(this), updateFrequency);
+        }
+        DataPulseProvider.prototype.subscribeBars = function (symbolInfo, resolution, newDataCallback, listenerGuid) {
+            if (this._subscribers.hasOwnProperty(listenerGuid)) {
+                return;
+            }
+            this._subscribers[listenerGuid] = {
+                lastBarTime: null,
+                listener: newDataCallback,
+                resolution: resolution,
+                symbolInfo: symbolInfo,
+            };
+            logMessage("DataPulseProvider: subscribed for #" + listenerGuid + " - {" + symbolInfo.name + ", " + resolution + "}");
+        };
+        DataPulseProvider.prototype.unsubscribeBars = function (listenerGuid) {
+            delete this._subscribers[listenerGuid];
+        };
+        DataPulseProvider.prototype._updateData = function () {
+            var _this = this;
+            if (this._requestsPending > 0) {
+                return;
+            }
+            this._requestsPending = 0;
+            var _loop_1 = function (listenerGuid) {
+                this_1._requestsPending += 1;
+                this_1._updateDataForSubscriber(listenerGuid)
+                    .then(function () {
+                    _this._requestsPending -= 1;
+                    logMessage("DataPulseProvider: data for #" + listenerGuid + " updated successfully, pending=" + _this._requestsPending);
+                })
+                    .catch(function (reason) {
+                    _this._requestsPending -= 1;
+                    logMessage("DataPulseProvider: data for #" + listenerGuid + " updated with error=" + getErrorMessage(reason) + ", pending=" + _this._requestsPending);
+                });
+            };
+            var this_1 = this;
+            for (var listenerGuid in this._subscribers) {
+                _loop_1(listenerGuid);
+            }
+        };
+        DataPulseProvider.prototype._updateDataForSubscriber = function (listenerGuid) {
+            var _this = this;
+            var subscriptionRecord = this._subscribers[listenerGuid];
+            var rangeEndTime = parseInt((Date.now() / 1000).toString());
+            // BEWARE: please note we really need 2 bars, not the only last one
+            // see the explanation below. `10` is the `large enough` value to work around holidays
+            var rangeStartTime = rangeEndTime - periodLengthSeconds(subscriptionRecord.resolution, 10);
+            return this._historyProvider.getBars(subscriptionRecord.symbolInfo, subscriptionRecord.resolution, {
+                from: rangeStartTime,
+                to: rangeEndTime,
+                countBack: 2,
+                firstDataRequest: false,
+            })
+                .then(function (result) {
+                _this._onSubscriberDataReceived(listenerGuid, result);
+            });
+        };
+        DataPulseProvider.prototype._onSubscriberDataReceived = function (listenerGuid, result) {
+            // means the subscription was cancelled while waiting for data
+            if (!this._subscribers.hasOwnProperty(listenerGuid)) {
+                return;
+            }
+            var bars = result.bars;
+            if (bars.length === 0) {
+                return;
+            }
+            var lastBar = bars[bars.length - 1];
+            var subscriptionRecord = this._subscribers[listenerGuid];
+            if (subscriptionRecord.lastBarTime !== null && lastBar.time < subscriptionRecord.lastBarTime) {
+                return;
+            }
+            var isNewBar = subscriptionRecord.lastBarTime !== null && lastBar.time > subscriptionRecord.lastBarTime;
+            // Pulse updating may miss some trades data (ie, if pulse period = 10 secods and new bar is started 5 seconds later after the last update, the
+            // old bar's last 5 seconds trades will be lost). Thus, at fist we should broadcast old bar updates when it's ready.
+            if (isNewBar) {
+                if (bars.length < 2) {
+                    throw new Error('Not enough bars in history for proper pulse update. Need at least 2.');
+                }
+                var previousBar = bars[bars.length - 2];
+                subscriptionRecord.listener(previousBar);
+            }
+            subscriptionRecord.lastBarTime = lastBar.time;
+            subscriptionRecord.listener(lastBar);
+        };
+        return DataPulseProvider;
+    }());
+    function periodLengthSeconds(resolution, requiredPeriodsCount) {
+        var daysCount = 0;
+        if (resolution === 'D' || resolution === '1D') {
+            daysCount = requiredPeriodsCount;
+        }
+        else if (resolution === 'M' || resolution === '1M') {
+            daysCount = 31 * requiredPeriodsCount;
+        }
+        else if (resolution === 'W' || resolution === '1W') {
+            daysCount = 7 * requiredPeriodsCount;
+        }
+        else {
+            daysCount = requiredPeriodsCount * parseInt(resolution) / (24 * 60);
+        }
+        return daysCount * 24 * 60 * 60;
+    }
+
+    var QuotesPulseProvider = /** @class */ (function () {
+        function QuotesPulseProvider(quotesProvider) {
+            this._subscribers = {};
+            this._requestsPending = 0;
+            this._quotesProvider = quotesProvider;
+            setInterval(this._updateQuotes.bind(this, 1 /* Fast */), 10000 /* Fast */);
+            setInterval(this._updateQuotes.bind(this, 0 /* General */), 60000 /* General */);
+        }
+        QuotesPulseProvider.prototype.subscribeQuotes = function (symbols, fastSymbols, onRealtimeCallback, listenerGuid) {
+            this._subscribers[listenerGuid] = {
+                symbols: symbols,
+                fastSymbols: fastSymbols,
+                listener: onRealtimeCallback,
+            };
+        };
+        QuotesPulseProvider.prototype.unsubscribeQuotes = function (listenerGuid) {
+            delete this._subscribers[listenerGuid];
+        };
+        QuotesPulseProvider.prototype._updateQuotes = function (updateType) {
+            var _this = this;
+            if (this._requestsPending > 0) {
+                return;
+            }
+            var _loop_1 = function (listenerGuid) {
+                this_1._requestsPending++;
+                var subscriptionRecord = this_1._subscribers[listenerGuid];
+                this_1._quotesProvider.getQuotes(updateType === 1 /* Fast */ ? subscriptionRecord.fastSymbols : subscriptionRecord.symbols)
+                    .then(function (data) {
+                    _this._requestsPending--;
+                    if (!_this._subscribers.hasOwnProperty(listenerGuid)) {
+                        return;
+                    }
+                    subscriptionRecord.listener(data);
+                    logMessage("QuotesPulseProvider: data for #" + listenerGuid + " (" + updateType + ") updated successfully, pending=" + _this._requestsPending);
+                })
+                    .catch(function (reason) {
+                    _this._requestsPending--;
+                    logMessage("QuotesPulseProvider: data for #" + listenerGuid + " (" + updateType + ") updated with error=" + getErrorMessage(reason) + ", pending=" + _this._requestsPending);
+                });
+            };
+            var this_1 = this;
+            for (var listenerGuid in this._subscribers) {
+                _loop_1(listenerGuid);
+            }
+        };
+        return QuotesPulseProvider;
+    }());
+
+    function extractField(data, field, arrayIndex, valueIsArray) {
+        var value = data[field];
+        if (Array.isArray(value) && (!valueIsArray || Array.isArray(value[0]))) {
+            return value[arrayIndex];
+        }
+        return value;
+    }
+    function symbolWithCurrencyKey(symbol, currency) {
+        // here we're using a separator that quite possible shouldn't be in a real symbol name
+        return symbol + (currency !== undefined ? '_%|#|%_' + currency : '');
+    }
+    var SymbolsStorage = /** @class */ (function () {
+        function SymbolsStorage(datafeedUrl, datafeedSupportedResolutions, requester) {
+            this._exchangesList = ['NYSE', 'FOREX', 'AMEX'];
+            this._symbolsInfo = {};
+            this._symbolsList = [];
+            this._datafeedUrl = datafeedUrl;
+            this._datafeedSupportedResolutions = datafeedSupportedResolutions;
+            this._requester = requester;
+            this._readyPromise = this._init();
+            this._readyPromise.catch(function (error) {
+                // seems it is impossible
+                // tslint:disable-next-line:no-console
+                console.error("SymbolsStorage: Cannot init, error=" + error.toString());
+            });
+        }
+        // BEWARE: this function does not consider symbol's exchange
+        SymbolsStorage.prototype.resolveSymbol = function (symbolName, currencyCode) {
+            var _this = this;
+            return this._readyPromise.then(function () {
+                var symbolInfo = _this._symbolsInfo[symbolWithCurrencyKey(symbolName, currencyCode)];
+                if (symbolInfo === undefined) {
+                    return Promise.reject('invalid symbol');
+                }
+                return Promise.resolve(symbolInfo);
+            });
+        };
+        SymbolsStorage.prototype.searchSymbols = function (searchString, exchange, symbolType, maxSearchResults) {
+            var _this = this;
+            return this._readyPromise.then(function () {
+                var weightedResult = [];
+                var queryIsEmpty = searchString.length === 0;
+                searchString = searchString.toUpperCase();
+                var _loop_1 = function (symbolName) {
+                    var symbolInfo = _this._symbolsInfo[symbolName];
+                    if (symbolInfo === undefined) {
+                        return "continue";
+                    }
+                    if (symbolType.length > 0 && symbolInfo.type !== symbolType) {
+                        return "continue";
+                    }
+                    if (exchange && exchange.length > 0 && symbolInfo.exchange !== exchange) {
+                        return "continue";
+                    }
+                    var positionInName = symbolInfo.name.toUpperCase().indexOf(searchString);
+                    var positionInDescription = symbolInfo.description.toUpperCase().indexOf(searchString);
+                    if (queryIsEmpty || positionInName >= 0 || positionInDescription >= 0) {
+                        var alreadyExists = weightedResult.some(function (item) { return item.symbolInfo === symbolInfo; });
+                        if (!alreadyExists) {
+                            var weight = positionInName >= 0 ? positionInName : 8000 + positionInDescription;
+                            weightedResult.push({ symbolInfo: symbolInfo, weight: weight });
+                        }
+                    }
+                };
+                for (var _i = 0, _a = _this._symbolsList; _i < _a.length; _i++) {
+                    var symbolName = _a[_i];
+                    _loop_1(symbolName);
+                }
+                var result = weightedResult
+                    .sort(function (item1, item2) { return item1.weight - item2.weight; })
+                    .slice(0, maxSearchResults)
+                    .map(function (item) {
+                    var symbolInfo = item.symbolInfo;
+                    return {
+                        symbol: symbolInfo.name,
+                        full_name: symbolInfo.full_name,
+                        description: symbolInfo.description,
+                        exchange: symbolInfo.exchange,
+                        params: [],
+                        type: symbolInfo.type,
+                        ticker: symbolInfo.name,
+                    };
+                });
+                return Promise.resolve(result);
+            });
+        };
+        SymbolsStorage.prototype._init = function () {
+            var _this = this;
+            var promises = [];
+            var alreadyRequestedExchanges = {};
+            for (var _i = 0, _a = this._exchangesList; _i < _a.length; _i++) {
+                var exchange = _a[_i];
+                if (alreadyRequestedExchanges[exchange]) {
+                    continue;
+                }
+                alreadyRequestedExchanges[exchange] = true;
+                promises.push(this._requestExchangeData(exchange));
+            }
+            return Promise.all(promises)
+                .then(function () {
+                _this._symbolsList.sort();
+            });
+        };
+        SymbolsStorage.prototype._requestExchangeData = function (exchange) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                _this._requester.sendRequest(_this._datafeedUrl, 'symbol_info', { group: exchange })
+                    .then(function (response) {
+                    try {
+                        _this._onExchangeDataReceived(exchange, response);
+                    }
+                    catch (error) {
+                        reject(error);
+                        return;
+                    }
+                    resolve();
+                })
+                    .catch(function (reason) {
+                    logMessage("SymbolsStorage: Request data for exchange '" + exchange + "' failed, reason=" + getErrorMessage(reason));
+                    resolve();
+                });
+            });
+        };
+        SymbolsStorage.prototype._onExchangeDataReceived = function (exchange, data) {
+            var symbolIndex = 0;
+            try {
+                var symbolsCount = data.symbol.length;
+                var tickerPresent = data.ticker !== undefined;
+                for (; symbolIndex < symbolsCount; ++symbolIndex) {
+                    var symbolName = data.symbol[symbolIndex];
+                    var listedExchange = extractField(data, 'exchange-listed', symbolIndex);
+                    var tradedExchange = extractField(data, 'exchange-traded', symbolIndex);
+                    var fullName = tradedExchange + ':' + symbolName;
+                    var currencyCode = extractField(data, 'currency-code', symbolIndex);
+                    var ticker = tickerPresent ? extractField(data, 'ticker', symbolIndex) : symbolName;
+                    var symbolInfo = {
+                        ticker: ticker,
+                        name: symbolName,
+                        base_name: [listedExchange + ':' + symbolName],
+                        full_name: fullName,
+                        listed_exchange: listedExchange,
+                        exchange: tradedExchange,
+                        currency_code: currencyCode,
+                        original_currency_code: extractField(data, 'original-currency-code', symbolIndex),
+                        description: extractField(data, 'description', symbolIndex),
+                        has_intraday: definedValueOrDefault(extractField(data, 'has-intraday', symbolIndex), false),
+                        has_no_volume: definedValueOrDefault(extractField(data, 'has-no-volume', symbolIndex), false),
+                        minmov: extractField(data, 'minmovement', symbolIndex) || extractField(data, 'minmov', symbolIndex) || 0,
+                        minmove2: extractField(data, 'minmove2', symbolIndex) || extractField(data, 'minmov2', symbolIndex),
+                        fractional: extractField(data, 'fractional', symbolIndex),
+                        pricescale: extractField(data, 'pricescale', symbolIndex),
+                        type: extractField(data, 'type', symbolIndex),
+                        session: extractField(data, 'session-regular', symbolIndex),
+                        timezone: extractField(data, 'timezone', symbolIndex),
+                        supported_resolutions: definedValueOrDefault(extractField(data, 'supported-resolutions', symbolIndex, true), this._datafeedSupportedResolutions),
+                        has_daily: definedValueOrDefault(extractField(data, 'has-daily', symbolIndex), true),
+                        intraday_multipliers: definedValueOrDefault(extractField(data, 'intraday-multipliers', symbolIndex, true), ['1', '5', '15', '30', '60']),
+                        has_weekly_and_monthly: extractField(data, 'has-weekly-and-monthly', symbolIndex),
+                        has_empty_bars: extractField(data, 'has-empty-bars', symbolIndex),
+                        volume_precision: definedValueOrDefault(extractField(data, 'volume-precision', symbolIndex), 0),
+                        format: 'price',
+                    };
+                    this._symbolsInfo[ticker] = symbolInfo;
+                    this._symbolsInfo[symbolName] = symbolInfo;
+                    this._symbolsInfo[fullName] = symbolInfo;
+                    if (currencyCode !== undefined) {
+                        this._symbolsInfo[symbolWithCurrencyKey(ticker, currencyCode)] = symbolInfo;
+                        this._symbolsInfo[symbolWithCurrencyKey(symbolName, currencyCode)] = symbolInfo;
+                        this._symbolsInfo[symbolWithCurrencyKey(fullName, currencyCode)] = symbolInfo;
+                    }
+                    this._symbolsList.push(symbolName);
+                }
+            }
+            catch (error) {
+                throw new Error("SymbolsStorage: API error when processing exchange " + exchange + " symbol #" + symbolIndex + " (" + data.symbol[symbolIndex] + "): " + error.message);
+            }
+        };
+        return SymbolsStorage;
+    }());
+    function definedValueOrDefault(value, defaultValue) {
+        return value !== undefined ? value : defaultValue;
+    }
+
+    function extractField$1(data, field, arrayIndex) {
+        var value = data[field];
+        return Array.isArray(value) ? value[arrayIndex] : value;
+    }
+    /**
+     * This class implements interaction with UDF-compatible datafeed.
+     * See UDF protocol reference at https://github.com/tradingview/charting_library/wiki/UDF
+     */
+    var UDFCompatibleDatafeedBase = /** @class */ (function () {
+        function UDFCompatibleDatafeedBase(datafeedURL, quotesProvider, requester, updateFrequency) {
+            var _this = this;
+            if (updateFrequency === void 0) { updateFrequency = 10 * 1000; }
+            this._configuration = defaultConfiguration();
+            this._symbolsStorage = null;
+            this._datafeedURL = datafeedURL;
+            this._requester = requester;
+            this._historyProvider = new HistoryProvider(datafeedURL, this._requester);
+            this._quotesProvider = quotesProvider;
+            this._dataPulseProvider = new DataPulseProvider(this._historyProvider, updateFrequency);
+            this._quotesPulseProvider = new QuotesPulseProvider(this._quotesProvider);
+            this._configurationReadyPromise = this._requestConfiguration()
+                .then(function (configuration) {
+                if (configuration === null) {
+                    configuration = defaultConfiguration();
+                }
+                _this._setupWithConfiguration(configuration);
+            });
+        }
+        UDFCompatibleDatafeedBase.prototype.onReady = function (callback) {
+            var _this = this;
+            this._configurationReadyPromise.then(function () {
+                callback(_this._configuration);
+            });
+        };
+        UDFCompatibleDatafeedBase.prototype.getQuotes = function (symbols, onDataCallback, onErrorCallback) {
+            this._quotesProvider.getQuotes(symbols).then(onDataCallback).catch(onErrorCallback);
+        };
+        UDFCompatibleDatafeedBase.prototype.subscribeQuotes = function (symbols, fastSymbols, onRealtimeCallback, listenerGuid) {
+            this._quotesPulseProvider.subscribeQuotes(symbols, fastSymbols, onRealtimeCallback, listenerGuid);
+        };
+        UDFCompatibleDatafeedBase.prototype.unsubscribeQuotes = function (listenerGuid) {
+            this._quotesPulseProvider.unsubscribeQuotes(listenerGuid);
+        };
+        UDFCompatibleDatafeedBase.prototype.getMarks = function (symbolInfo, from, to, onDataCallback, resolution) {
+            if (!this._configuration.supports_marks) {
+                return;
+            }
+            var requestParams = {
+                symbol: symbolInfo.ticker || '',
+                from: from,
+                to: to,
+                resolution: resolution,
+            };
+            this._send('marks', requestParams)
+                .then(function (response) {
+                if (!Array.isArray(response)) {
+                    var result = [];
+                    for (var i = 0; i < response.id.length; ++i) {
+                        result.push({
+                            id: extractField$1(response, 'id', i),
+                            time: extractField$1(response, 'time', i),
+                            color: extractField$1(response, 'color', i),
+                            text: extractField$1(response, 'text', i),
+                            label: extractField$1(response, 'label', i),
+                            labelFontColor: extractField$1(response, 'labelFontColor', i),
+                            minSize: extractField$1(response, 'minSize', i),
+                        });
+                    }
+                    response = result;
+                }
+                onDataCallback(response);
+            })
+                .catch(function (error) {
+                logMessage("UdfCompatibleDatafeed: Request marks failed: " + getErrorMessage(error));
+                onDataCallback([]);
+            });
+        };
+        UDFCompatibleDatafeedBase.prototype.getTimescaleMarks = function (symbolInfo, from, to, onDataCallback, resolution) {
+            if (!this._configuration.supports_timescale_marks) {
+                return;
+            }
+            var requestParams = {
+                symbol: symbolInfo.ticker || '',
+                from: from,
+                to: to,
+                resolution: resolution,
+            };
+            this._send('timescale_marks', requestParams)
+                .then(function (response) {
+                if (!Array.isArray(response)) {
+                    var result = [];
+                    for (var i = 0; i < response.id.length; ++i) {
+                        result.push({
+                            id: extractField$1(response, 'id', i),
+                            time: extractField$1(response, 'time', i),
+                            color: extractField$1(response, 'color', i),
+                            label: extractField$1(response, 'label', i),
+                            tooltip: extractField$1(response, 'tooltip', i),
+                        });
+                    }
+                    response = result;
+                }
+                onDataCallback(response);
+            })
+                .catch(function (error) {
+                logMessage("UdfCompatibleDatafeed: Request timescale marks failed: " + getErrorMessage(error));
+                onDataCallback([]);
+            });
+        };
+        UDFCompatibleDatafeedBase.prototype.getServerTime = function (callback) {
+            if (!this._configuration.supports_time) {
+                return;
+            }
+            this._send('time')
+                .then(function (response) {
+                var time = parseInt(response);
+                if (!isNaN(time)) {
+                    callback(time);
+                }
+            })
+                .catch(function (error) {
+                logMessage("UdfCompatibleDatafeed: Fail to load server time, error=" + getErrorMessage(error));
+            });
+        };
+        UDFCompatibleDatafeedBase.prototype.searchSymbols = function (userInput, exchange, symbolType, onResult) {
+            if (this._configuration.supports_search) {
+                var params = {
+                    limit: 30 /* SearchItemsLimit */,
+                    query: userInput.toUpperCase(),
+                    type: symbolType,
+                    exchange: exchange,
+                };
+                this._send('search', params)
+                    .then(function (response) {
+                    if (response.s !== undefined) {
+                        logMessage("UdfCompatibleDatafeed: search symbols error=" + response.errmsg);
+                        onResult([]);
+                        return;
+                    }
+                    onResult(response);
+                })
+                    .catch(function (reason) {
+                    logMessage("UdfCompatibleDatafeed: Search symbols for '" + userInput + "' failed. Error=" + getErrorMessage(reason));
+                    onResult([]);
+                });
+            }
+            else {
+                if (this._symbolsStorage === null) {
+                    throw new Error('UdfCompatibleDatafeed: inconsistent configuration (symbols storage)');
+                }
+                this._symbolsStorage.searchSymbols(userInput, exchange, symbolType, 30 /* SearchItemsLimit */)
+                    .then(onResult)
+                    .catch(onResult.bind(null, []));
+            }
+        };
+        UDFCompatibleDatafeedBase.prototype.resolveSymbol = function (symbolName, onResolve, onError, extension) {
+            var currencyCode = extension && extension.currencyCode;
+            function onResultReady(symbolInfo) {
+                onResolve(symbolInfo);
+            }
+            if (!this._configuration.supports_group_request) {
+                var params = {
+                    symbol: symbolName,
+                };
+                if (currencyCode !== undefined) {
+                    params.currencyCode = currencyCode;
+                }
+                this._send('symbols', params)
+                    .then(function (response) {
+                    if (response.s !== undefined) {
+                        onError('unknown_symbol');
+                    }
+                    else {
+                        onResultReady(response);
+                    }
+                })
+                    .catch(function (reason) {
+                    logMessage("UdfCompatibleDatafeed: Error resolving symbol: " + getErrorMessage(reason));
+                    onError('unknown_symbol');
+                });
+            }
+            else {
+                if (this._symbolsStorage === null) {
+                    throw new Error('UdfCompatibleDatafeed: inconsistent configuration (symbols storage)');
+                }
+                this._symbolsStorage.resolveSymbol(symbolName, currencyCode).then(onResultReady).catch(onError);
+            }
+        };
+        UDFCompatibleDatafeedBase.prototype.getBars = function (symbolInfo, resolution, periodParams, onResult, onError) {
+            this._historyProvider.getBars(symbolInfo, resolution, periodParams)
+                .then(function (result) {
+                onResult(result.bars, result.meta);
+            })
+                .catch(onError);
+        };
+        UDFCompatibleDatafeedBase.prototype.subscribeBars = function (symbolInfo, resolution, onTick, listenerGuid, onResetCacheNeededCallback) {
+            this._dataPulseProvider.subscribeBars(symbolInfo, resolution, onTick, listenerGuid);
+        };
+        UDFCompatibleDatafeedBase.prototype.unsubscribeBars = function (listenerGuid) {
+            this._dataPulseProvider.unsubscribeBars(listenerGuid);
+        };
+        UDFCompatibleDatafeedBase.prototype._requestConfiguration = function () {
+            return this._send('config')
+                .catch(function (reason) {
+                logMessage("UdfCompatibleDatafeed: Cannot get datafeed configuration - use default, error=" + getErrorMessage(reason));
+                return null;
+            });
+        };
+        UDFCompatibleDatafeedBase.prototype._send = function (urlPath, params) {
+            return this._requester.sendRequest(this._datafeedURL, urlPath, params);
+        };
+        UDFCompatibleDatafeedBase.prototype._setupWithConfiguration = function (configurationData) {
+            this._configuration = configurationData;
+            if (configurationData.exchanges === undefined) {
+                configurationData.exchanges = [];
+            }
+            if (!configurationData.supports_search && !configurationData.supports_group_request) {
+                throw new Error('Unsupported datafeed configuration. Must either support search, or support group request');
+            }
+            if (configurationData.supports_group_request || !configurationData.supports_search) {
+                this._symbolsStorage = new SymbolsStorage(this._datafeedURL, configurationData.supported_resolutions || [], this._requester);
+            }
+            logMessage("UdfCompatibleDatafeed: Initialized with " + JSON.stringify(configurationData));
+        };
+        return UDFCompatibleDatafeedBase;
+    }());
+    function defaultConfiguration() {
+        return {
+            supports_search: false,
+            supports_group_request: true,
+            supported_resolutions: [
+                '1',
+                '5',
+                '15',
+                '30',
+                '60',
+                '1D',
+                '1W',
+                '1M' ],
+            supports_marks: false,
+            supports_timescale_marks: false,
+        };
+    }
+
+    var QuotesProvider = /** @class */ (function () {
+        function QuotesProvider(datafeedUrl, requester) {
+            this._datafeedUrl = datafeedUrl;
+            this._requester = requester;
+        }
+        QuotesProvider.prototype.getQuotes = function (symbols) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                _this._requester.sendRequest(_this._datafeedUrl, 'quotes', { symbols: symbols })
+                    .then(function (response) {
+                    if (response.s === 'ok') {
+                        resolve(response.d);
+                    }
+                    else {
+                        reject(response.errmsg);
+                    }
+                })
+                    .catch(function (error) {
+                    var errorMessage = getErrorMessage(error);
+                    reject("network error: " + errorMessage);
+                });
+            });
+        };
+        return QuotesProvider;
+    }());
+
+    var Requester = /** @class */ (function () {
+        function Requester(headers) {
+            if (headers) {
+                this._headers = headers;
+            }
+        }
+        Requester.prototype.sendRequest = function (datafeedUrl, urlPath, params) {
+            if (params !== undefined) {
+                var paramKeys = Object.keys(params);
+                if (paramKeys.length !== 0) {
+                    urlPath += '?';
+                }
+                urlPath += paramKeys.map(function (key) {
+                    return encodeURIComponent(key) + "=" + encodeURIComponent(params[key].toString());
+                }).join('&');
+            }
+            // Send user cookies if the URL is on the same origin as the calling script.
+            var options = { credentials: 'same-origin' };
+            if (this._headers !== undefined) {
+                options.headers = this._headers;
+            }
+            return fetch(datafeedUrl + "/" + urlPath, options)
+                .then(function (response) { return response.text(); })
+                .then(function (responseTest) { return JSON.parse(responseTest); });
+        };
+        return Requester;
+    }());
+
+    var UDFCompatibleDatafeed = /** @class */ (function (_super) {
+        __extends(UDFCompatibleDatafeed, _super);
+        function UDFCompatibleDatafeed(datafeedURL, updateFrequency) {
+            if (updateFrequency === void 0) { updateFrequency = 10 * 1000; }
+            var _this = this;
+            var requester = new Requester();
+            var quotesProvider = new QuotesProvider(datafeedURL, requester);
+            _this = _super.call(this, datafeedURL, quotesProvider, requester, updateFrequency) || this;
+            return _this;
+        }
+        return UDFCompatibleDatafeed;
+    }(UDFCompatibleDatafeedBase));
+
+    exports.UDFCompatibleDatafeed = UDFCompatibleDatafeed;
+
+    Object.defineProperty(exports, '__esModule', { value: true });
+
+})));
