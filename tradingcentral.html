@@ -5,7 +5,7 @@
 <!-- Fix for iOS Safari zooming bug -->
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=Edge">
-<script type="text/javascript" src="charting_library/charting_library.js"></script>
+<script type="text/javascript" src="charting2/charting_library.js"></script>
 <script type="text/javascript" src="datafeeds/udf/dist/polyfills.js"></script>
 <script type="text/javascript" src="datafeeds/udf/dist/bundle.js"></script>
 <!-- Include the Trading Central plugin files -->
@@ -26,7 +26,7 @@ function initOnReady() {
                     interval: "1D",
                     container_id: "tv_chart_container",
                     datafeed: new Datafeeds.UDFCompatibleDatafeed("https://demo_feed.tradingview.com"),
-                    library_path: "charting_library/",
+                    library_path: "charting2/",
                     locale: "en",
                     disabled_features: ["use_localstorage_for_settings"],
                     theme: "light",
