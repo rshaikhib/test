@@ -37,7 +37,6 @@
      * If you want to enable logs from datafeed set it to `true`
      */
     function logMessage(message) {
-        console.log(message);
     }
     function getErrorMessage(error) {
         if (error === undefined) {
@@ -56,18 +55,14 @@
         }
         HistoryProvider.prototype.getBars = function (symbolInfo, resolution, periodParams) {
             var _this = this;
-            const LATEST = 1522108800;
-            const ONE_YEAR = 60 * 60 * 24 * 365;
             var requestParams = {
                 symbol: symbolInfo.ticker || '',
                 resolution: resolution,
-                from: LATEST - ONE_YEAR,
-                to: LATEST,
+                from: periodParams.from,
+                to: periodParams.to,
             };
-            console.log('calling getBars', periodParams, requestParams);
-
             if (periodParams.countBack !== undefined) {
-                // requestParams.countback = periodParams.countBack;
+                requestParams.countback = periodParams.countBack;
             }
             if (symbolInfo.currency_code !== undefined) {
                 requestParams.currencyCode = symbolInfo.currency_code;
